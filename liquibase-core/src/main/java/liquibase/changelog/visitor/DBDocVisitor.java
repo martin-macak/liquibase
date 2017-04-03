@@ -64,7 +64,7 @@ public class DBDocVisitor implements ChangeSetVisitor {
     }
 
     @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         ChangeSet.RunStatus runStatus = this.database.getRunStatus(changeSet);
         if (rootChangeLogName == null) {
             rootChangeLogName = changeSet.getFilePath();
@@ -116,6 +116,7 @@ public class DBDocVisitor implements ChangeSetVisitor {
                 }
             }
         }
+        return VisitResult.completed();
     }
 
     public void writeHTML(File rootOutputDir, ResourceAccessor resourceAccessor) throws IOException, LiquibaseException, DatabaseHistoryException {

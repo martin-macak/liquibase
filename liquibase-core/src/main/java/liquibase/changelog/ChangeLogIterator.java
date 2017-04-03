@@ -6,14 +6,16 @@ import liquibase.RuntimeEnvironment;
 import liquibase.changelog.filter.*;
 import liquibase.changelog.visitor.SkippedChangeSetVisitor;
 import liquibase.changelog.visitor.ChangeSetVisitor;
-import liquibase.database.Database;
+import liquibase.changelog.visitor.VisitResult;
 import liquibase.exception.LiquibaseException;
 import liquibase.logging.LogFactory;
 import liquibase.logging.Logger;
-import liquibase.util.CollectionUtil;
 import liquibase.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class ChangeLogIterator {
     private DatabaseChangeLog databaseChangeLog;
@@ -48,6 +50,7 @@ public class ChangeLogIterator {
     }
 
     public void run(ChangeSetVisitor visitor, RuntimeEnvironment env) throws LiquibaseException {
+        final LinkedList<CompletableFuture<Void>> pendingCompletions = new LinkedList<>();
         Logger log = LogFactory.getLogger();
         databaseChangeLog.setRuntimeEnvironment(env);
         log.setChangeLog(databaseChangeLog);
@@ -76,8 +79,13 @@ public class ChangeLogIterator {
 
                 log.setChangeSet(changeSet);
                 if (shouldVisit && !alreadySaw(changeSet)) {
-                    visitor.visit(changeSet, databaseChangeLog, env.getTargetDatabase(), reasonsAccepted);
-                    markSeen(changeSet);
+                    final VisitResult visitResult = visitor.visit(changeSet, databaseChangeLog, env.getTargetDatabase(), reasonsAccepted);
+                    final CompletableFuture<Void> completion = visitResult.getCompletion();
+                    if (completion.isDone()) {
+                        markSeen(changeSet);
+                    } else {
+                        pendingCompletions.add(completion);
+                    }
                 } else {
                     if (visitor instanceof SkippedChangeSetVisitor) {
                         ((SkippedChangeSetVisitor) visitor).skipped(changeSet, databaseChangeLog, env.getTargetDatabase(), reasonsDenied);
@@ -86,8 +94,16 @@ public class ChangeLogIterator {
                 log.setChangeSet(null);
             }
         } finally {
-            log.setChangeLog(null);
-            databaseChangeLog.setRuntimeEnvironment(null);
+            if (pendingCompletions.size() > 0) {
+                final CompletableFuture<Void> pending = CompletableFuture.allOf(pendingCompletions.toArray(new CompletableFuture[pendingCompletions.size()]));
+                pending.thenAccept(aVoid -> {
+                    log.setChangeLog(null);
+                    databaseChangeLog.setRuntimeEnvironment(null);
+                }).join();
+            } else {
+                log.setChangeLog(null);
+                databaseChangeLog.setRuntimeEnvironment(null);
+            }
         }
     }
 

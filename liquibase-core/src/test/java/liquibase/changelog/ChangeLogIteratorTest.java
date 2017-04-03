@@ -6,6 +6,7 @@ import liquibase.changelog.filter.ChangeSetFilterResult;
 import liquibase.changelog.filter.ContextChangeSetFilter;
 import liquibase.changelog.filter.DbmsChangeSetFilter;
 import liquibase.changelog.visitor.ChangeSetVisitor;
+import liquibase.changelog.visitor.VisitResult;
 import liquibase.database.Database;
 import liquibase.database.core.MySQLDatabase;
 import static org.junit.Assert.*;
@@ -86,8 +87,9 @@ public class ChangeLogIteratorTest {
         }
 
         @Override
-        public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+        public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
             visitedChangeSets.add(changeSet);
+            return VisitResult.completed();
         }
     }
 

@@ -10,6 +10,7 @@ import liquibase.RuntimeEnvironment;
 import liquibase.changelog.ChangeLogIterator;
 import liquibase.changelog.filter.ChangeSetFilterResult;
 import liquibase.changelog.visitor.ChangeSetVisitor;
+import liquibase.changelog.visitor.VisitResult;
 import liquibase.database.Database;
 import liquibase.exception.LiquibaseException;
 import liquibase.sdk.database.MockDatabase;
@@ -39,8 +40,9 @@ public class XMLChangeLogSAXParserTest {
             }
 
             @Override
-            public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+            public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
                 changeSets.add(changeSet);
+                return VisitResult.completed();
             }
         }, new RuntimeEnvironment(new MockDatabase(), new Contexts(), new LabelExpression()));
 

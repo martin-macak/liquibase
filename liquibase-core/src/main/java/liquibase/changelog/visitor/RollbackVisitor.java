@@ -34,12 +34,13 @@ public class RollbackVisitor implements ChangeSetVisitor {
     }
 
     @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         LogFactory.getLogger().info("Rolling Back Changeset:" + changeSet);
         changeSet.rollback(this.database);
         this.database.removeRanStatus(changeSet);
         sendRollbackEvent(changeSet, databaseChangeLog, database);
         this.database.commit();
+        return VisitResult.completed();
 
     }
 

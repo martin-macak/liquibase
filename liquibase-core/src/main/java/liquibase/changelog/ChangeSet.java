@@ -153,6 +153,8 @@ public class ChangeSet implements Conditional, ChangeLogChild {
      */
     private boolean validationFailed;
 
+    private boolean runParallel;
+
     /**
      * Changes defined to roll back this changeSet
      */
@@ -746,6 +748,14 @@ public class ChangeSet implements Conditional, ChangeLogChild {
 
     public void setLabels(Labels labels) {
         this.labels = labels;
+    }
+
+    public boolean isRunParallel() {
+        return runParallel;
+    }
+
+    public void setRunParallel(boolean runParallel) {
+        this.runParallel = runParallel;
     }
 
     public Set<String> getDbmsSet() {

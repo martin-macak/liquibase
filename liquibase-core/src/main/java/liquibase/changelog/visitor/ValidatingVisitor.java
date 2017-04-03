@@ -98,7 +98,7 @@ public class ValidatingVisitor implements ChangeSetVisitor {
         
 
         @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         RanChangeSet ranChangeSet = findChangeSet(changeSet);
         boolean ran = ranChangeSet != null;
         boolean shouldValidate = !ran || changeSet.shouldRunOnChange() || changeSet.shouldAlwaysRun();
@@ -145,6 +145,8 @@ public class ValidatingVisitor implements ChangeSetVisitor {
         } else {
             seenChangeSets.add(changeSetString);
         }
+
+        return VisitResult.completed();
     }
 
     public List<String> getInvalidMD5Sums() {

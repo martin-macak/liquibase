@@ -28,10 +28,11 @@ public class StatusVisitor implements ChangeSetVisitor, SkippedChangeSetVisitor 
     }
 
     @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         ChangeSetStatus status = addStatus(changeSet, databaseChangeLog, database);
         status.setWillRun(true);
         status.setFilterResults(filterResults);
+        return VisitResult.completed();
     }
 
     @Override

@@ -13,14 +13,18 @@ import liquibase.logging.LogFactory;
 import liquibase.logging.Logger;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
 
 public class UpdateVisitor implements ChangeSetVisitor {
 
     private Database database;
 
     private Logger log = LogFactory.getLogger();
-    
+
     private ChangeExecListener execListener;
+
+    private final ForkJoinPool threadPool = new ForkJoinPool(10);
 
     /**
      * @deprecated - please use the constructor with ChangeExecListener, which can be null.
@@ -29,10 +33,10 @@ public class UpdateVisitor implements ChangeSetVisitor {
     public UpdateVisitor(Database database) {
         this.database = database;
     }
-    
+
     public UpdateVisitor(Database database, ChangeExecListener execListener) {
-      this(database);
-      this.execListener = execListener;
+        this(database);
+        this.execListener = execListener;
     }
 
     @Override
@@ -41,7 +45,32 @@ public class UpdateVisitor implements ChangeSetVisitor {
     }
 
     @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+        VisitResult result;
+        if (changeSet.isRunParallel()) {
+            final CompletableFuture future = new CompletableFuture();
+            result = new VisitResult() {
+                @Override
+                public CompletableFuture<Void> getCompletion() {
+                    return future;
+                }
+            };
+            threadPool.execute(() -> {
+                try {
+                    doVisit(changeSet, databaseChangeLog, database, filterResults);
+                    future.complete(null);
+                } catch (LiquibaseException e) {
+                    future.completeExceptionally(e);
+                }
+            });
+        } else {
+            doVisit(changeSet, databaseChangeLog, database, filterResults);
+            result = VisitResult.completed();
+        }
+        return result;
+    }
+
+    private void doVisit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         ChangeSet.RunStatus runStatus = this.database.getRunStatus(changeSet);
         log.debug("Running Changeset:" + changeSet);
         fireWillRun(changeSet, databaseChangeLog, database, runStatus);
@@ -71,14 +100,14 @@ public class UpdateVisitor implements ChangeSetVisitor {
     }
 
     protected void fireWillRun(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database2, RunStatus runStatus) {
-      if (execListener != null) {
-        execListener.willRun(changeSet, databaseChangeLog, database, runStatus);
-      }      
+        if (execListener != null) {
+            execListener.willRun(changeSet, databaseChangeLog, database, runStatus);
+        }
     }
 
     protected void fireRan(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database2, ExecType execType) {
-      if (execListener != null) {
-        execListener.ran(changeSet, databaseChangeLog, database, execType);
-      }
+        if (execListener != null) {
+            execListener.ran(changeSet, databaseChangeLog, database, execType);
+        }
     }
 }

@@ -549,9 +549,10 @@ public class Liquibase {
             }
 
             @Override
-            public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+            public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
                 database.removeRanStatus(changeSet);
                 database.commit();
+                return VisitResult.completed();
             }
         }, new RuntimeEnvironment(database, contexts, labelExpression));
     }

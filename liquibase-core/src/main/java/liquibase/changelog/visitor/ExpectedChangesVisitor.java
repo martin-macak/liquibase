@@ -22,13 +22,14 @@ public class ExpectedChangesVisitor implements ChangeSetVisitor {
     }
 
     @Override
-    public void visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
+    public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         for (Iterator<RanChangeSet> i = unexpectedChangeSets.iterator(); i.hasNext(); ) {
             RanChangeSet ranChangeSet = i.next();
             if (ranChangeSet.isSameAs(changeSet)) {
                 i.remove();
             }
         }
+        return VisitResult.completed();
     }
 
     public Collection<RanChangeSet> getUnexpectedChangeSets() {
