@@ -271,6 +271,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
         this.id = node.getChildValue(null, "id", String.class);
         this.author = node.getChildValue(null, "author", String.class);
         this.alwaysRun  = node.getChildValue(null, "runAlways", node.getChildValue(null, "alwaysRun", false));
+        this.runParallel = node.getChildValue(null, "runInParallel", false);
         this.runOnChange  = node.getChildValue(null, "runOnChange", false);
         this.contexts = new ContextExpression(node.getChildValue(null, "context", String.class));
         this.labels = new Labels(StringUtils.trimToNull(node.getChildValue(null, "labels", String.class)));
