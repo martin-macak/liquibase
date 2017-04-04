@@ -260,6 +260,7 @@
 		<xsd:attribute name="failOnError" type="booleanExp" />
         <xsd:attribute name="onValidationFail" type="onChangeSetValidationFail" />
 		<xsd:attribute name="runInTransaction" type="booleanExp" default="true" />
+        <xsd:attribute name="runInParallel" type="booleanExp" default="false" />
 		<xsd:attribute name="logicalFilePath" type="xsd:string" />
         <xsd:attribute name="objectQuotingStrategy" type="objectQuotingStrategy" />
         <xsd:attribute name="created" type="xsd:string"/>
@@ -908,7 +909,7 @@
                 <xsd:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded" />
 			</xsd:choice>
 			<xsd:attributeGroup ref="tableNameAttribute" />
-            <xsd:attribute name="tablespace" type="xsd:string" />            
+            <xsd:attribute name="tablespace" type="xsd:string" />
 			<xsd:attribute name="remarks" type="xsd:string" />
             <xsd:anyAttribute namespace="##other" processContents="lax"/>
 		</xsd:complexType>
@@ -1185,7 +1186,7 @@
 		<xsd:complexType>
 			<xsd:attributeGroup ref="tableNameAttribute" />
 			<xsd:attributeGroup ref="indexName" />
-            <xsd:attribute name="associatedWith" type="xsd:string" use="optional" />            
+            <xsd:attribute name="associatedWith" type="xsd:string" use="optional" />
 		</xsd:complexType>
 	</xsd:element>
 

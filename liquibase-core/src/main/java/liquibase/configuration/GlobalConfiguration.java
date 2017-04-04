@@ -21,6 +21,7 @@ public class GlobalConfiguration extends AbstractConfigurationContainer {
     public static final String DIFF_COLUMN_ORDER = "diffColumnOrder";
     public static final String ALWAYS_OVERRIDE_STORED_LOGIC_SCHEMA = "alwaysOverrideStoredLogicSchema";
     public static final String GENERATED_CHANGESET_IDS_INCLUDE_DESCRIPTION = "generatedChangeSetIdsContainsDescription";
+    public static final String FORMATTED_SQL_CHANGELOG_EXTENSIONS = "formattedSqlChangelogExtensions";
 
     public GlobalConfiguration() {
         super("liquibase");
@@ -88,6 +89,11 @@ public class GlobalConfiguration extends AbstractConfigurationContainer {
         getContainer().addProperty(GENERATED_CHANGESET_IDS_INCLUDE_DESCRIPTION, Boolean.class)
                 .setDescription("Should Liquibase include the change description in the id when generating changeSets?")
                 .setDefaultValue(false);
+
+
+        getContainer().addProperty(FORMATTED_SQL_CHANGELOG_EXTENSIONS, String.class)
+                .setDescription("Extensions permitted for liquibase formatted sql")
+                .setDefaultValue("sql,pck,pdf,tps");
     }
 
     /**
@@ -236,6 +242,16 @@ public class GlobalConfiguration extends AbstractConfigurationContainer {
 
     public GlobalConfiguration setGeneratedChangeSetIdsContainDescription(boolean containDescription) {
         getContainer().setValue(GENERATED_CHANGESET_IDS_INCLUDE_DESCRIPTION, containDescription);
+        return this;
+    }
+
+
+    public String getFormattedSqlChangelogExtensions() {
+        return getContainer().getValue(FORMATTED_SQL_CHANGELOG_EXTENSIONS, String.class);
+    }
+
+    public GlobalConfiguration setFormattedSqlChangelogExtensions(String sqlChangelogExtensions) {
+        getContainer().setValue(FORMATTED_SQL_CHANGELOG_EXTENSIONS, sqlChangelogExtensions);
         return this;
     }
 }

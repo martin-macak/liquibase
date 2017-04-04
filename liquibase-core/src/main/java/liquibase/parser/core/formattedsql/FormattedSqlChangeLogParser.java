@@ -6,6 +6,8 @@ import liquibase.change.core.RawSQLChange;
 import liquibase.changelog.ChangeLogParameters;
 import liquibase.changelog.ChangeSet;
 import liquibase.changelog.DatabaseChangeLog;
+import liquibase.configuration.GlobalConfiguration;
+import liquibase.configuration.LiquibaseConfiguration;
 import liquibase.exception.ChangeLogParseException;
 import liquibase.logging.LogFactory;
 import liquibase.parser.ChangeLogParser;
@@ -20,6 +22,7 @@ import liquibase.util.SystemUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,7 +32,8 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
     public boolean supports(String changeLogFile, ResourceAccessor resourceAccessor) {
         BufferedReader reader = null;
         try {
-            if (changeLogFile.endsWith(".sql")) {
+            String[] supportedExtensions = LiquibaseConfiguration.getInstance().getConfiguration(GlobalConfiguration.class).getFormattedSqlChangelogExtensions().split(",");
+            if (Arrays.stream(supportedExtensions).parallel().anyMatch(changeLogFile::endsWith)) {
                 InputStream fileStream = openChangeLogFile(changeLogFile, resourceAccessor);
                 if (fileStream == null) {
                     return false;
