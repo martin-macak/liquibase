@@ -6,6 +6,8 @@ import liquibase.change.core.RawSQLChange;
 import liquibase.changelog.ChangeLogParameters;
 import liquibase.changelog.ChangeSet;
 import liquibase.changelog.DatabaseChangeLog;
+import liquibase.configuration.GlobalConfiguration;
+import liquibase.configuration.LiquibaseConfiguration;
 import liquibase.exception.ChangeLogParseException;
 import liquibase.logging.LogFactory;
 import liquibase.parser.ChangeLogParser;
@@ -20,6 +22,7 @@ import liquibase.util.SystemUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,7 +32,8 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
     public boolean supports(String changeLogFile, ResourceAccessor resourceAccessor) {
         BufferedReader reader = null;
         try {
-            if (changeLogFile.endsWith(".sql")) {
+            String[] supportedExtensions = LiquibaseConfiguration.getInstance().getConfiguration(GlobalConfiguration.class).getFormattedSqlChangelogExtensions().split(",");
+            if (Arrays.stream(supportedExtensions).parallel().anyMatch(changeLogFile::endsWith)) {
                 InputStream fileStream = openChangeLogFile(changeLogFile, resourceAccessor);
                 if (fileStream == null) {
                     return false;
@@ -96,6 +100,7 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
             Pattern logicalFilePathPattern = Pattern.compile(".*logicalFilePath:(\\S*).*", Pattern.CASE_INSENSITIVE);
             Pattern labelsPattern = Pattern.compile(".*labels:(\\S*).*", Pattern.CASE_INSENSITIVE);
             Pattern runInTransactionPattern = Pattern.compile(".*runInTransaction:(\\w+).*", Pattern.CASE_INSENSITIVE);
+            Pattern runInParallelPattern = Pattern.compile(".*runInParallel:(\\w+).*", Pattern.CASE_INSENSITIVE);
             Pattern dbmsPattern = Pattern.compile(".*dbms:([^,][\\w!,]+).*", Pattern.CASE_INSENSITIVE);
             Pattern failOnErrorPattern = Pattern.compile(".*failOnError:(\\w+).*", Pattern.CASE_INSENSITIVE);
             Pattern onFailPattern = Pattern.compile(".*onFail:(\\w+).*", Pattern.CASE_INSENSITIVE);
@@ -148,6 +153,7 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
                     Matcher contextPatternMatcher = contextPattern.matcher(line);
                     Matcher labelsPatternMatcher = labelsPattern.matcher(line);
                     Matcher runInTransactionPatternMatcher = runInTransactionPattern.matcher(line);
+                    Matcher runInParallelPatternMatcher = runInParallelPattern.matcher(line);
                     Matcher dbmsPatternMatcher = dbmsPattern.matcher(line);
                     Matcher failOnErrorPatternMatcher = failOnErrorPattern.matcher(line);
 
@@ -157,6 +163,7 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
                     boolean runOnChange = parseBoolean(runOnChangePatternMatcher, changeSet, false);
                     boolean runAlways = parseBoolean(runAlwaysPatternMatcher, changeSet, false);
                     boolean runInTransaction = parseBoolean(runInTransactionPatternMatcher, changeSet, true);
+                    boolean runInParallel = parseBoolean(runInParallelPatternMatcher, changeSet, false);
                     boolean failOnError = parseBoolean(failOnErrorPatternMatcher, changeSet, true);
 
                     String endDelimiter = parseString(endDelimiterPatternMatcher);
@@ -173,6 +180,7 @@ public class FormattedSqlChangeLogParser implements ChangeLogParser {
 
 
                     changeSet = new ChangeSet(changeSetPatternMatcher.group(2), changeSetPatternMatcher.group(1), runAlways, runOnChange, logicalFilePath, context, dbms, runInTransaction, changeLog.getObjectQuotingStrategy(), changeLog);
+                    changeSet.setRunParallel(runInParallel);
                     changeSet.setLabels(new Labels(labels));
                     changeSet.setFailOnError(failOnError);
                     changeLog.addChangeSet(changeSet);
