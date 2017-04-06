@@ -153,8 +153,6 @@ public class ChangeSet implements Conditional, ChangeLogChild {
      */
     private boolean validationFailed;
 
-    private boolean runParallel;
-
     /**
      * Changes defined to roll back this changeSet
      */
@@ -182,6 +180,8 @@ public class ChangeSet implements Conditional, ChangeLogChild {
     private DatabaseChangeLog changeLog;
 
     private String created;
+
+    private ChangeSetAsyncLevel asyncLevel;
 
     /**
      * Allow changeSet to be ran "first" or "last". Multiple changeSets with the same runOrder will preserve their order relative to each other.
@@ -270,13 +270,13 @@ public class ChangeSet implements Conditional, ChangeLogChild {
     public void load(ParsedNode node, ResourceAccessor resourceAccessor) throws ParsedNodeException {
         this.id = node.getChildValue(null, "id", String.class);
         this.author = node.getChildValue(null, "author", String.class);
-        this.alwaysRun  = node.getChildValue(null, "runAlways", node.getChildValue(null, "alwaysRun", false));
-        this.runParallel = node.getChildValue(null, "runInParallel", false);
-        this.runOnChange  = node.getChildValue(null, "runOnChange", false);
+        this.alwaysRun = node.getChildValue(null, "runAlways", node.getChildValue(null, "alwaysRun", false));
+        this.asyncLevel = ChangeSetAsyncLevel.fromString(node.getChildValue(null, "asyncLevel", "SYNCHRONOUS"));
+        this.runOnChange = node.getChildValue(null, "runOnChange", false);
         this.contexts = new ContextExpression(node.getChildValue(null, "context", String.class));
         this.labels = new Labels(StringUtils.trimToNull(node.getChildValue(null, "labels", String.class)));
         setDbms(node.getChildValue(null, "dbms", String.class));
-        this.runInTransaction  = node.getChildValue(null, "runInTransaction", true);
+        this.runInTransaction = node.getChildValue(null, "runInTransaction", true);
         this.created = node.getChildValue(null, "created", String.class);
         this.runOrder = node.getChildValue(null, "runOrder", String.class);
         this.comments = StringUtils.join(node.getChildren(null, "comment"), "\n", new StringUtils.StringUtilsFormatter() {
@@ -419,7 +419,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
             Change rollbackChange = toChange(childNode, resourceAccessor);
             if (rollbackChange != null) {
                 addRollbackChange(rollbackChange);
-                foundValue =  true;
+                foundValue = true;
             }
         }
 
@@ -435,7 +435,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
                     }
                 }
             } else {
-                throw new ParsedNodeException("Unexpected object: "+value.getClass().getName()+" '"+value.toString()+"'");
+                throw new ParsedNodeException("Unexpected object: " + value.getClass().getName() + " '" + value.toString() + "'");
             }
         }
         if (!foundValue) {
@@ -657,7 +657,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
 
             RanChangeSet ranChangeSet = database.getRanChangeSet(this);
             if (hasCustomRollbackChanges()) {
-                
+
                 final List<SqlStatement> statements = new LinkedList<SqlStatement>();
                 for (Change change : rollback.getChanges()) {
                     if (((change instanceof DbmsTargetedChange)) && !DatabaseList.definitionMatches(((DbmsTargetedChange) change).getDbms(), database, true)) {
@@ -665,7 +665,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
                     }
                     ValidationErrors errors = change.validate(database);
                     if (errors.hasErrors()) {
-                        throw new RollbackFailedException("Rollback statement failed validation: "+errors.toString());
+                        throw new RollbackFailedException("Rollback statement failed validation: " + errors.toString());
                     }
                     SqlStatement[] changeStatements = change.generateStatements(database);
                     if (changeStatements != null) {
@@ -715,7 +715,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
     protected boolean hasCustomRollbackChanges() {
         return rollback != null && rollback.getChanges() != null && rollback.getChanges().size() > 0;
     }
-    
+
     /**
      * Returns an unmodifiable list of changes.  To add one, use the addRefactoing method.
      */
@@ -749,14 +749,6 @@ public class ChangeSet implements Conditional, ChangeLogChild {
 
     public void setLabels(Labels labels) {
         this.labels = labels;
-    }
-
-    public boolean isRunParallel() {
-        return runParallel;
-    }
-
-    public void setRunParallel(boolean runParallel) {
-        this.runParallel = runParallel;
     }
 
     public Set<String> getDbmsSet() {
@@ -811,6 +803,14 @@ public class ChangeSet implements Conditional, ChangeLogChild {
 
     public boolean isRunInTransaction() {
         return runInTransaction;
+    }
+
+    public ChangeSetAsyncLevel getAsyncLevel() {
+        return asyncLevel;
+    }
+
+    public void setAsyncLevel(ChangeSetAsyncLevel asyncLevel) {
+        this.asyncLevel = asyncLevel;
     }
 
     public RollbackContainer getRollback() {
@@ -1101,7 +1101,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
             }
         }
 
-        throw new UnexpectedLiquibaseException("Unexpected field request on changeSet: "+field);
+        throw new UnexpectedLiquibaseException("Unexpected field request on changeSet: " + field);
     }
 
     @Override

@@ -3,6 +3,7 @@ package liquibase.changelog.visitor;
 import liquibase.changelog.ChangeSet;
 import liquibase.changelog.ChangeSet.ExecType;
 import liquibase.changelog.ChangeSet.RunStatus;
+import liquibase.changelog.ChangeSetAsyncLevel;
 import liquibase.changelog.DatabaseChangeLog;
 import liquibase.changelog.filter.ChangeSetFilterResult;
 import liquibase.database.Database;
@@ -47,14 +48,9 @@ public class UpdateVisitor implements ChangeSetVisitor {
     @Override
     public VisitResult visit(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, Set<ChangeSetFilterResult> filterResults) throws LiquibaseException {
         VisitResult result;
-        if (changeSet.isRunParallel()) {
+        if (changeSet.getAsyncLevel() == ChangeSetAsyncLevel.ASYNCBLOCK || changeSet.getAsyncLevel() == ChangeSetAsyncLevel.PARALLEL) {
             final CompletableFuture future = new CompletableFuture();
-            result = new VisitResult() {
-                @Override
-                public CompletableFuture<Void> getCompletion() {
-                    return future;
-                }
-            };
+            result = () -> future;
             threadPool.execute(() -> {
                 try {
                     doVisit(changeSet, databaseChangeLog, database, filterResults);

@@ -50,7 +50,9 @@ public class ChangeLogIterator {
     }
 
     public void run(ChangeSetVisitor visitor, RuntimeEnvironment env) throws LiquibaseException {
-        final LinkedList<CompletableFuture<Void>> pendingCompletions = new LinkedList<>();
+        final LinkedList<CompletableFuture<Void>> pendingParallels = new LinkedList<>();
+        final LinkedList<CompletableFuture<Void>> pendingAsyncBlocks = new LinkedList<>();
+
         Logger log = LogFactory.getLogger();
         databaseChangeLog.setRuntimeEnvironment(env);
         log.setChangeLog(databaseChangeLog);
@@ -81,11 +83,27 @@ public class ChangeLogIterator {
                 if (shouldVisit && !alreadySaw(changeSet)) {
                     final VisitResult visitResult = visitor.visit(changeSet, databaseChangeLog, env.getTargetDatabase(), reasonsAccepted);
                     final CompletableFuture<Void> completion = visitResult.getCompletion();
-                    if (completion.isDone()) {
-                        markSeen(changeSet);
-                    } else {
-                        pendingCompletions.add(completion);
+                    switch (changeSet.getAsyncLevel()) {
+                        case SYNCHRONOUS:
+                            if (!pendingAsyncBlocks.isEmpty()) {
+                                final CompletableFuture<Void> pending = CompletableFuture.allOf(pendingAsyncBlocks
+                                        .toArray(new CompletableFuture[pendingAsyncBlocks.size()]));
+                                pending.join();
+                            }
+                            break;
+                        case ASYNCBLOCK:
+                            if (!completion.isDone()) {
+                                pendingAsyncBlocks.add(completion);
+                            }
+                            break;
+                        case PARALLEL:
+                            if (!completion.isDone()) {
+                                pendingParallels.add(completion);
+                            }
+
+                            break;
                     }
+                    markSeen(changeSet);
                 } else {
                     if (visitor instanceof SkippedChangeSetVisitor) {
                         ((SkippedChangeSetVisitor) visitor).skipped(changeSet, databaseChangeLog, env.getTargetDatabase(), reasonsDenied);
@@ -94,8 +112,12 @@ public class ChangeLogIterator {
                 log.setChangeSet(null);
             }
         } finally {
-            if (pendingCompletions.size() > 0) {
-                final CompletableFuture<Void> pending = CompletableFuture.allOf(pendingCompletions.toArray(new CompletableFuture[pendingCompletions.size()]));
+            if (pendingParallels.size() > 0) {
+                final ArrayList<CompletableFuture<Void>> allPendings = new ArrayList<>();
+                allPendings.addAll(pendingAsyncBlocks);
+                allPendings.addAll(pendingParallels);
+                final CompletableFuture<Void> pending = CompletableFuture.allOf(allPendings
+                        .toArray(new CompletableFuture[allPendings.size()]));
                 pending.thenAccept(aVoid -> {
                     log.setChangeLog(null);
                     databaseChangeLog.setRuntimeEnvironment(null);
