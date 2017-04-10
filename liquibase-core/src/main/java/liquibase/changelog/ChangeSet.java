@@ -806,7 +806,7 @@ public class ChangeSet implements Conditional, ChangeLogChild {
     }
 
     public ChangeSetAsyncLevel getAsyncLevel() {
-        return asyncLevel;
+        return asyncLevel != null ? asyncLevel : ChangeSetAsyncLevel.SYNCHRONOUS;
     }
 
     public void setAsyncLevel(ChangeSetAsyncLevel asyncLevel) {
